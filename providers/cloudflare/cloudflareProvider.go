@@ -34,7 +34,7 @@ Domain level metadata available:
 */
 
 func init() {
-	providers.RegisterDomainServiceProviderType("CLOUDFLAREAPI", newCloudflare, providers.CanUseAlias)
+	providers.RegisterDomainServiceProviderType("CLOUDFLAREAPI", newCloudflare, providers.CanUseAlias, providers.CanUseSRV)
 	providers.RegisterCustomRecordType("CF_REDIRECT", "CLOUDFLAREAPI", "")
 	providers.RegisterCustomRecordType("CF_TEMP_REDIRECT", "CLOUDFLAREAPI", "")
 }
@@ -221,7 +221,7 @@ func (c *CloudflareApi) preprocessConfig(dc *models.DomainConfig) error {
 		if rec.TTL != 1 && rec.TTL < 120 {
 			rec.TTL = 120
 		}
-		if rec.Type != "A" && rec.Type != "CNAME" && rec.Type != "AAAA" && rec.Type != "ALIAS" {
+		if rec.Type != "A" && rec.Type != "CNAME" && rec.Type != "AAAA" && rec.Type != "ALIAS" && rec.Type != "SRV" {
 			if rec.Metadata[metaProxy] != "" {
 				return fmt.Errorf("cloudflare_proxy set on %v record: %#v cloudflare_proxy=%#v", rec.Type, rec.Name, rec.Metadata[metaProxy])
 			}
@@ -340,7 +340,7 @@ type cfRecord struct {
 
 func (c *cfRecord) toRecord(domain string) *models.RecordConfig {
 	//normalize cname,mx,ns records with dots to be consistent with our config format.
-	if c.Type == "CNAME" || c.Type == "MX" || c.Type == "NS" {
+	if c.Type == "CNAME" || c.Type == "MX" || c.Type == "NS" || c.Type == "SRV" {
 		c.Content = dnsutil.AddOrigin(c.Content+".", domain)
 	}
 	return &models.RecordConfig{
@@ -354,7 +354,7 @@ func (c *cfRecord) toRecord(domain string) *models.RecordConfig {
 }
 
 func getProxyMetadata(r *models.RecordConfig) map[string]string {
-	if r.Type != "A" && r.Type != "AAAA" && r.Type != "CNAME" {
+	if r.Type != "A" && r.Type != "AAAA" && r.Type != "CNAME" && r.Type != "SRV" {
 		return nil
 	}
 	proxied := false
